@@ -11,32 +11,34 @@ window.addEventListener('resize', resizeCanvas);
 
 // Configuration
 const config = {
-    horizonY: 0.3, // Horizon line position (30% from top) - starting point
+    horizonY: 0.25, // Horizon line position (25% from top) - matches image perspective
     vanishingPointX: 0.5, // Vanishing point X (center)
-    gridSpacing: 80, // Base spacing between grid lines
-    speed: 2, // Movement speed
-    gridDepth: 60, // Number of grid rows (enough for seamless cycle)
+    gridSpacing: 100, // Base spacing between grid lines - increased for better visibility
+    speed: 1.5, // Movement speed - slightly slower for better viewing
+    gridDepth: 80, // Number of grid rows (enough for seamless cycle)
     isPlaying: true,
     blockDensity: 0.5 // Checkerboard pattern - 50% of alternating cells
 };
 
-// Blocks with terms and mixed colors
+// Blocks with terms and colors matching the image (blue, teal, purple shades)
 const blocks = [
-    { term: 'DATA ENGINEERING', color: '#9370DB' }, // Purple
-    { term: 'DATA ANALYST', color: '#00CED1' }, // Teal/Cyan
-    { term: 'DATA SCIENTIST', color: '#4169E1' }, // Blue
-    { term: 'MACHINE LEARNING', color: '#9370DB' }, // Purple
-    { term: 'BIG DATA', color: '#00CED1' }, // Teal/Cyan
-    { term: 'FEATURE ENGINEERING', color: '#4169E1' }, // Blue
-    { term: 'MLOPS', color: '#9370DB' }, // Purple
-    { term: 'CLOUD DATA', color: '#00CED1' }, // Teal/Cyan
-    { term: 'ETL', color: '#4169E1' }, // Blue
-    { term: 'ELT', color: '#9370DB' }, // Purple
-    { term: 'DATA QUALITY', color: '#00CED1' }, // Teal/Cyan
-    { term: 'MODEL TRAINING', color: '#4169E1' }, // Blue
-    { term: 'DATA PIPELINES', color: '#9370DB' }, // Purple
-    { term: 'PYTHON', color: '#00CED1' }, // Teal/Cyan
-    { term: 'SQL', color: '#4169E1' } // Blue
+    { term: 'DATA ENGINEERING', color: '#8A2BE2' }, // Blue Violet / Purple
+    { term: 'DATA', color: '#00CED1' }, // Dark Turquoise / Teal
+    { term: 'DATA SCIENTIST', color: '#4169E1' }, // Royal Blue
+    { term: 'MACHINE LEARNING', color: '#9370DB' }, // Medium Slate Blue / Purple
+    { term: 'BIG DATA', color: '#20B2AA' }, // Light Sea Green / Teal
+    { term: 'FEATURE ENGINEERING', color: '#6495ED' }, // Cornflower Blue
+    { term: 'MLOPS', color: '#8A2BE2' }, // Blue Violet
+    { term: 'CLOUD', color: '#00CED1' }, // Dark Turquoise / Teal
+    { term: 'ETL', color: '#4169E1' }, // Royal Blue
+    { term: 'ELT', color: '#9370DB' }, // Medium Slate Blue
+    { term: 'DATA QUALITY', color: '#20B2AA' }, // Light Sea Green / Teal
+    { term: 'MODEL TRAINING', color: '#6495ED' }, // Cornflower Blue
+    { term: 'DATA PIPELINES', color: '#8A2BE2' }, // Blue Violet
+    { term: 'PYTHON', color: '#00CED1' }, // Dark Turquoise / Teal
+    { term: 'SQL', color: '#4169E1' }, // Royal Blue
+    { term: 'BIG', color: '#9370DB' }, // Medium Slate Blue
+    { term: 'DATA ANALYST', color: '#20B2AA' } // Light Sea Green / Teal
 ];
 
 // Grid state
@@ -56,14 +58,14 @@ function drawGrid() {
         if (y < vpY - 30 || y > canvas.height + 100) continue;
         
         const distanceFromHorizon = y - vpY;
-        const scale = Math.max(0.02, Math.abs(distanceFromHorizon) / (canvas.height * 0.6));
+        const scale = Math.max(0.03, Math.abs(distanceFromHorizon) / (canvas.height * 0.7));
         const width = canvas.width * scale;
         const cellSize = config.gridSpacing * scale;
         const numCells = Math.ceil(width / cellSize);
         
-        // Draw horizontal grid line (white/grey for visibility)
-        ctx.strokeStyle = '#E0E0E0';
-        ctx.lineWidth = 1;
+        // Draw horizontal grid line (subtle grey lines)
+        ctx.strokeStyle = '#D0D0D0';
+        ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.moveTo(vpX - width / 2, y);
         ctx.lineTo(vpX + width / 2, y);
@@ -72,6 +74,8 @@ function drawGrid() {
         // Draw vertical grid lines converging to vanishing point
         for (let cell = -Math.floor(numCells / 2); cell <= Math.floor(numCells / 2); cell++) {
             const x = vpX + cell * cellSize;
+            ctx.strokeStyle = '#D0D0D0';
+            ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(vpX, vpY);
@@ -90,8 +94,8 @@ function drawGrid() {
         
         const distanceFromHorizon = y - vpY;
         const prevDistance = prevY - vpY;
-        const scale = Math.max(0.02, Math.abs(distanceFromHorizon) / (canvas.height * 0.6));
-        const prevScale = Math.max(0.02, Math.abs(prevDistance) / (canvas.height * 0.6));
+        const scale = Math.max(0.03, Math.abs(distanceFromHorizon) / (canvas.height * 0.7));
+        const prevScale = Math.max(0.03, Math.abs(prevDistance) / (canvas.height * 0.7));
         
         const cellSize = config.gridSpacing * scale;
         const prevCellSize = config.gridSpacing * prevScale;
@@ -125,22 +129,19 @@ function drawGrid() {
             ctx.closePath();
             ctx.fill();
             
-            // Draw white grid lines on top of block
+            // Draw white grid lines on top of block (more visible borders)
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(topLeftX, prevY);
             ctx.lineTo(topRightX, prevY);
-            ctx.moveTo(topRightX, prevY);
             ctx.lineTo(bottomRightX, y);
-            ctx.moveTo(bottomLeftX, y);
-            ctx.lineTo(bottomRightX, y);
-            ctx.moveTo(topLeftX, prevY);
             ctx.lineTo(bottomLeftX, y);
+            ctx.closePath();
             ctx.stroke();
             
-            // Draw term text on blocks (only if large enough)
-            if (scale > 0.08) {
+            // Draw term text on blocks (show text on more blocks)
+            if (scale > 0.06) {
                 const centerX = (topLeftX + topRightX + bottomLeftX + bottomRightX) / 4;
                 const centerY = (prevY + y) / 2;
                 
@@ -149,11 +150,11 @@ function drawGrid() {
                 const cellHeight = Math.abs(y - prevY);
                 const minDimension = Math.min(cellWidth, cellHeight);
                 
-                // Calculate font size that fits
-                let fontSize = Math.max(6, Math.min(scale * 22, minDimension * 0.3));
+                // Calculate font size that fits (larger text for better visibility)
+                let fontSize = Math.max(8, Math.min(scale * 28, minDimension * 0.35));
                 
                 ctx.fillStyle = '#FFFFFF';
-                ctx.font = `bold ${fontSize}px Arial`;
+                ctx.font = `bold ${fontSize}px Arial, sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 
@@ -163,42 +164,50 @@ function drawGrid() {
                 
                 // Check if text fits on one line
                 ctx.save();
-                ctx.font = `bold ${fontSize}px Arial`;
+                ctx.font = `bold ${fontSize}px Arial, sans-serif`;
                 const metrics = ctx.measureText(block.term);
-                if (metrics.width > cellWidth * 0.9) {
+                if (metrics.width > cellWidth * 0.85) {
                     needsSplit = true;
                     // Try smaller font or split
                     if (words.length > 1) {
-                        fontSize = Math.max(6, fontSize * 0.7);
+                        fontSize = Math.max(8, fontSize * 0.75);
                     }
                 }
                 ctx.restore();
                 
-                // Render text
+                // Render text with better visibility
                 if (needsSplit && words.length > 1) {
                     // Split into two lines
                     const midPoint = Math.ceil(words.length / 2);
                     const line1 = words.slice(0, midPoint).join(' ');
                     const line2 = words.slice(midPoint).join(' ');
                     
-                    ctx.font = `bold ${fontSize}px Arial`;
-                    const lineHeight = fontSize * 1.2;
+                    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                    const lineHeight = fontSize * 1.3;
                     const totalHeight = lineHeight * 2;
                     
                     // Check if two lines fit
-                    if (totalHeight <= cellHeight * 0.8) {
+                    if (totalHeight <= cellHeight * 0.75) {
                         ctx.fillText(line1, centerX, centerY - lineHeight / 2);
                         ctx.fillText(line2, centerX, centerY + lineHeight / 2);
                     } else {
                         // Use single line with smaller font
-                        fontSize = Math.max(6, cellHeight * 0.25);
-                        ctx.font = `bold ${fontSize}px Arial`;
+                        fontSize = Math.max(8, cellHeight * 0.28);
+                        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
                         ctx.fillText(block.term, centerX, centerY);
                     }
                 } else {
-                    // Single line
-                    ctx.font = `bold ${fontSize}px Arial`;
+                    // Single line - ensure text is visible
+                    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                    // Add text shadow for better readability
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    ctx.shadowBlur = 2;
+                    ctx.shadowOffsetX = 1;
+                    ctx.shadowOffsetY = 1;
                     ctx.fillText(block.term, centerX, centerY);
+                    ctx.shadowBlur = 0;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
                 }
             }
         }
