@@ -9,13 +9,13 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// Configuration
+// Configuration - matching the reference image exactly
 const config = {
-    horizonY: 0.5, // Horizon line position (50% from top) - mid-height
+    horizonY: 0.5, // Horizon at mid-height (50% from top) - vanishing point
     vanishingPointX: 0.5, // Vanishing point X (center)
-    gridSpacing: 100, // Base spacing between grid lines
+    gridSpacing: 120, // Base spacing between grid lines
     speed: 1.5, // Movement speed
-    gridDepth: 100, // Number of grid rows (enough for seamless cycle)
+    gridDepth: 120, // Number of grid rows for full coverage
     isPlaying: true
 };
 
@@ -41,35 +41,37 @@ const blocks = [
 // Grid state
 let gridOffset = 0;
 
-// Draw one-point perspective grid - full plane extending across entire viewport
+// Draw one-point perspective grid - matching reference image exactly
 function drawGrid() {
     const horizonY = canvas.height * config.horizonY;
     const vpX = canvas.width * config.vanishingPointX;
     const vpY = horizonY;
     
-    // Clear canvas with white background first
+    // Clear canvas with white background
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Draw grid lines - extending fully across the plane
+    // Draw grid lines first - very thin, subtle on white background
+    // Grid extends fully across the plane
     for (let i = 0; i < config.gridDepth; i++) {
         const depth = i + gridOffset;
+        // Grid starts larger at bottom (foreground) and converges upward to vanishing point
         const y = vpY + depth * config.gridSpacing;
         
-        // Only draw lines that are visible on screen
-        if (y < -100 || y > canvas.height + 100) continue;
+        // Only draw visible lines
+        if (y < -200 || y > canvas.height + 200) continue;
         
         const distanceFromHorizon = y - vpY;
-        // Scale increases as we move away from horizon (downward)
-        const scale = Math.max(0.01, Math.abs(distanceFromHorizon) / (canvas.height * 0.8));
+        // Scale increases as we move away from horizon (downward = larger)
+        const scale = Math.max(0.005, Math.abs(distanceFromHorizon) / (canvas.height * 0.9));
         const cellSize = config.gridSpacing * scale;
         
-        // Calculate how many cells we need to cover full width
-        // For perspective, cells get larger as we move away from horizon
-        const maxWidth = Math.max(canvas.width * 1.5, Math.abs(distanceFromHorizon) * 2);
+        // Calculate cells needed to cover full width and beyond
+        const maxWidth = Math.max(canvas.width * 2, Math.abs(distanceFromHorizon) * 3);
         const numCells = Math.ceil(maxWidth / cellSize);
         
         // Draw horizontal grid line - full width across the plane
+        // Very thin, subtle grey on white background
         ctx.strokeStyle = '#E8E8E8';
         ctx.lineWidth = 0.5;
         ctx.beginPath();
@@ -78,39 +80,39 @@ function drawGrid() {
         ctx.stroke();
         
         // Draw vertical grid lines converging to vanishing point
-        // Extend beyond viewport to ensure full coverage
+        // Extend well beyond viewport for full coverage
         for (let cell = -numCells; cell <= numCells; cell++) {
             const x = vpX + cell * cellSize;
-            // Only draw if line would be visible
-            if (x < -100 || x > canvas.width + 100) continue;
+            // Only draw if line would intersect viewport
+            if (x < -200 || x > canvas.width + 200) continue;
             
             ctx.beginPath();
-            ctx.moveTo(x, Math.max(0, y));
+            ctx.moveTo(x, Math.max(-100, y));
             ctx.lineTo(vpX, vpY);
             ctx.stroke();
         }
     }
     
-    // Draw filled blocks with checkerboard pattern - full plane
+    // Draw filled blocks with checkerboard pattern - full plane coverage
     for (let i = 1; i < config.gridDepth; i++) {
         const depth = i + gridOffset;
         const y = vpY + depth * config.gridSpacing;
         const prevY = vpY + (depth - 1) * config.gridSpacing;
         
-        // Only draw blocks that are visible on screen
-        if (y < -100 || y > canvas.height + 100) continue;
-        if (prevY < -100) continue;
+        // Only draw visible blocks
+        if (y < -200 || y > canvas.height + 200) continue;
+        if (prevY < -200) continue;
         
         const distanceFromHorizon = y - vpY;
         const prevDistance = prevY - vpY;
-        const scale = Math.max(0.01, Math.abs(distanceFromHorizon) / (canvas.height * 0.8));
-        const prevScale = Math.max(0.01, Math.abs(prevDistance) / (canvas.height * 0.8));
+        const scale = Math.max(0.005, Math.abs(distanceFromHorizon) / (canvas.height * 0.9));
+        const prevScale = Math.max(0.005, Math.abs(prevDistance) / (canvas.height * 0.9));
         
         const cellSize = config.gridSpacing * scale;
         const prevCellSize = config.gridSpacing * prevScale;
         
-        // Calculate cells needed to cover full width and beyond
-        const maxWidth = Math.max(canvas.width * 1.5, Math.abs(distanceFromHorizon) * 2);
+        // Calculate cells needed to cover full width
+        const maxWidth = Math.max(canvas.width * 2, Math.abs(distanceFromHorizon) * 3);
         const numCells = Math.ceil(maxWidth / cellSize);
         
         for (let cell = -numCells; cell < numCells; cell++) {
@@ -129,15 +131,15 @@ function drawGrid() {
             const bottomRightX = vpX + (cell + 1) * cellSize;
             
             // Skip if cell is completely outside viewport
-            const minX = Math.min(topLeftX, bottomLeftX);
-            const maxX = Math.max(topRightX, bottomRightX);
+            const minX = Math.min(topLeftX, bottomLeftX, topRightX, bottomRightX);
+            const maxX = Math.max(topLeftX, bottomLeftX, topRightX, bottomRightX);
             if (maxX < 0 || minX > canvas.width) continue;
             
             // Get block data (deterministic based on position)
-            const blockIndex = Math.abs((i * 13 + cell * 7) % blocks.length);
+            const blockIndex = Math.abs((i * 17 + cell * 11) % blocks.length);
             const block = blocks[blockIndex];
             
-            // Draw filled block (solid color, no gradient)
+            // Draw filled block with color
             ctx.fillStyle = block.color;
             ctx.beginPath();
             ctx.moveTo(topLeftX, prevY);
@@ -147,7 +149,7 @@ function drawGrid() {
             ctx.closePath();
             ctx.fill();
             
-            // Draw white grid lines on top of block
+            // Draw white grid lines on top of colored block - more distinct borders
             ctx.strokeStyle = '#FFFFFF';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -161,8 +163,9 @@ function drawGrid() {
             ctx.lineTo(bottomLeftX, y);
             ctx.stroke();
             
-            // Draw term text on blocks (only if large enough and visible)
-            if (scale > 0.06 && y > 0 && y < canvas.height) {
+            // Draw term text on blocks - white, bold, centered
+            // Only draw if block is large enough and visible
+            if (scale > 0.05 && y > 0 && y < canvas.height) {
                 const centerX = (topLeftX + topRightX + bottomLeftX + bottomRightX) / 4;
                 const centerY = (prevY + y) / 2;
                 
@@ -172,7 +175,7 @@ function drawGrid() {
                 const minDimension = Math.min(cellWidth, cellHeight);
                 
                 // Calculate font size that fits - scales with perspective
-                let fontSize = Math.max(8, Math.min(scale * 35, minDimension * 0.35));
+                let fontSize = Math.max(8, Math.min(scale * 40, minDimension * 0.4));
                 
                 ctx.fillStyle = '#FFFFFF';
                 ctx.font = `bold ${fontSize}px Arial`;
@@ -189,7 +192,6 @@ function drawGrid() {
                 const metrics = ctx.measureText(block.term);
                 if (metrics.width > cellWidth * 0.85) {
                     needsSplit = true;
-                    // Try smaller font or split
                     if (words.length > 1) {
                         fontSize = Math.max(8, fontSize * 0.8);
                     }
@@ -213,7 +215,7 @@ function drawGrid() {
                         ctx.fillText(line2, centerX, centerY + lineHeight / 2);
                     } else {
                         // Use single line with smaller font
-                        fontSize = Math.max(8, cellHeight * 0.28);
+                        fontSize = Math.max(8, cellHeight * 0.3);
                         ctx.font = `bold ${fontSize}px Arial`;
                         ctx.fillText(block.term, centerX, centerY);
                     }
@@ -238,7 +240,7 @@ function animate() {
             gridOffset = 0;
         }
         
-        // Draw the grid (background is cleared inside drawGrid)
+        // Draw the grid
         drawGrid();
     } else {
         // When paused, still draw the grid
@@ -261,4 +263,3 @@ document.getElementById('reset').addEventListener('click', () => {
     config.isPlaying = true;
     document.getElementById('playPause').textContent = 'Pause';
 });
-
