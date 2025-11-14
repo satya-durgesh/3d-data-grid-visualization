@@ -11,35 +11,32 @@ window.addEventListener('resize', resizeCanvas);
 
 // Configuration
 const config = {
-    horizonY: 0.5, // Horizon line at mid-height (50% from top) - matches image
+    horizonY: 0.25, // Horizon line position (25% from top) - vanishing point
     vanishingPointX: 0.5, // Vanishing point X (center)
-    gridSpacing: 90, // Base spacing between grid lines
+    gridSpacing: 100, // Base spacing between grid lines
     speed: 1.5, // Movement speed
-    gridDepth: 100, // Number of grid rows (enough for seamless cycle)
+    gridDepth: 80, // Number of grid rows (enough for seamless cycle)
     isPlaying: true,
     blockDensity: 0.5 // Checkerboard pattern - 50% of alternating cells
 };
 
-// Blocks with terms and colors matching the image exactly
-// Medium Purple, Vibrant Teal, Light Blue
+// Blocks with terms matching the image - blue, teal, purple colors
 const blocks = [
-    { term: 'DATA ENGINEERING', color: '#9B59B6' }, // Medium Purple
-    { term: 'DATA', color: '#1ABC9C' }, // Vibrant Teal
-    { term: 'DATA SCIENTIST', color: '#5DADE2' }, // Light Blue
-    { term: 'MACHINE LEARNING', color: '#9B59B6' }, // Medium Purple
-    { term: 'BIG DATA', color: '#1ABC9C' }, // Vibrant Teal
-    { term: 'FEATURE ENGINEERING', color: '#5DADE2' }, // Light Blue
-    { term: 'MLOPS', color: '#9B59B6' }, // Medium Purple
-    { term: 'CLOUD', color: '#1ABC9C' }, // Vibrant Teal
-    { term: 'ETL', color: '#5DADE2' }, // Light Blue
-    { term: 'ELT', color: '#9B59B6' }, // Medium Purple
-    { term: 'DATA QUALITY', color: '#1ABC9C' }, // Vibrant Teal
-    { term: 'MODEL TRAINING', color: '#5DADE2' }, // Light Blue
-    { term: 'DATA PIPELINES', color: '#9B59B6' }, // Medium Purple
-    { term: 'PYTHON', color: '#1ABC9C' }, // Vibrant Teal
-    { term: 'SQL', color: '#5DADE2' }, // Light Blue
-    { term: 'BIG', color: '#9B59B6' }, // Medium Purple
-    { term: 'DATA ANALYST', color: '#1ABC9C' } // Vibrant Teal
+    { term: 'ETL', color: '#4169E1' }, // Blue
+    { term: 'DATA', color: '#00CED1' }, // Teal/Cyan
+    { term: 'DATA ENGINEER', color: '#9370DB' }, // Purple
+    { term: 'BIG', color: '#4169E1' }, // Blue
+    { term: 'SQL', color: '#00CED1' }, // Teal/Cyan
+    { term: 'CLOUD', color: '#9370DB' }, // Purple
+    { term: 'MACHINE LEARNING', color: '#4169E1' }, // Blue
+    { term: 'MODEL TRAINING', color: '#00CED1' }, // Teal/Cyan
+    { term: 'DATA QUALITY', color: '#9370DB' }, // Purple
+    { term: 'PYTHON', color: '#4169E1' }, // Blue
+    { term: 'DATA ENGINEERING', color: '#00CED1' }, // Teal/Cyan
+    { term: 'DATA ANALYST', color: '#9370DB' }, // Purple
+    { term: 'DATA SCIENTIST', color: '#4169E1' }, // Blue
+    { term: 'BIG DATA', color: '#00CED1' }, // Teal/Cyan
+    { term: 'MLOPS', color: '#9370DB' } // Purple
 ];
 
 // Grid state
@@ -51,22 +48,22 @@ function drawGrid() {
     const vpX = canvas.width * config.vanishingPointX;
     const vpY = horizonY;
     
-    // Draw grid lines first (white lines on white background - subtle)
+    // Draw grid lines first - more visible lines
     for (let i = 0; i < config.gridDepth; i++) {
         const depth = i + gridOffset;
         const y = vpY + depth * config.gridSpacing;
         
-        if (y < vpY - 50 || y > canvas.height + 150) continue;
+        if (y < vpY - 30 || y > canvas.height + 100) continue;
         
         const distanceFromHorizon = y - vpY;
-        const scale = Math.max(0.02, Math.abs(distanceFromHorizon) / (canvas.height * 0.6));
+        const scale = Math.max(0.02, Math.abs(distanceFromHorizon) / (canvas.height * 0.7));
         const width = canvas.width * scale;
         const cellSize = config.gridSpacing * scale;
         const numCells = Math.ceil(width / cellSize);
         
-        // Draw horizontal grid line (very subtle grey lines on white background)
-        ctx.strokeStyle = '#E8E8E8';
-        ctx.lineWidth = 0.5;
+        // Draw horizontal grid line (light grey for visibility)
+        ctx.strokeStyle = '#D0D0D0';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(vpX - width / 2, y);
         ctx.lineTo(vpX + width / 2, y);
@@ -75,8 +72,6 @@ function drawGrid() {
         // Draw vertical grid lines converging to vanishing point
         for (let cell = -Math.floor(numCells / 2); cell <= Math.floor(numCells / 2); cell++) {
             const x = vpX + cell * cellSize;
-            ctx.strokeStyle = '#E8E8E8';
-            ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(vpX, vpY);
@@ -90,8 +85,8 @@ function drawGrid() {
         const y = vpY + depth * config.gridSpacing;
         const prevY = vpY + (depth - 1) * config.gridSpacing;
         
-        if (y < vpY - 50 || y > canvas.height + 150) continue;
-        if (prevY < vpY - 50) continue;
+        if (y < vpY - 30 || y > canvas.height + 100) continue;
+        if (prevY < vpY - 30) continue;
         
         const distanceFromHorizon = y - vpY;
         const prevDistance = prevY - vpY;
@@ -104,11 +99,13 @@ function drawGrid() {
         const numCells = Math.ceil(width / cellSize);
         
         for (let cell = -Math.floor(numCells / 2); cell < Math.floor(numCells / 2); cell++) {
-            // Checkerboard pattern - alternating cells
-            const isEven = (i + cell) % 2 === 0;
+            // Checkerboard pattern - alternating cells (more visible pattern)
+            const rowParity = Math.floor(i) % 2;
+            const colParity = Math.floor(cell + Math.floor(numCells / 2)) % 2;
+            const isCheckerboard = (rowParity + colParity) % 2 === 0;
             
-            // Only fill checkerboard pattern cells (every other cell)
-            if (!isEven) continue;
+            // Only fill checkerboard pattern cells
+            if (!isCheckerboard) continue;
             
             // Calculate cell corners with perspective
             const topLeftX = vpX + cell * prevCellSize;
@@ -120,22 +117,8 @@ function drawGrid() {
             const blockIndex = Math.abs((i * 13 + cell * 7) % blocks.length);
             const block = blocks[blockIndex];
             
-            // Some squares towards the back should appear white/light grey
-            // Based on distance from horizon (further back = more likely to be white)
-            const distanceRatio = Math.abs(distanceFromHorizon) / (canvas.height * 0.8);
-            // Deterministic white squares based on position (no flickering)
-            const whiteSeed = (i * 17 + cell * 11) % 100;
-            const shouldBeWhite = distanceRatio > 0.6 && whiteSeed < 30; // 30% of distant cells
-            
-            // Draw filled block
-            if (shouldBeWhite) {
-                // White/light grey squares for distant cells
-                ctx.fillStyle = scale < 0.1 ? '#F5F5F5' : '#FFFFFF';
-            } else {
-                // Colored blocks
-                ctx.fillStyle = block.color;
-            }
-            
+            // Draw filled block (solid color, no gradient)
+            ctx.fillStyle = block.color;
             ctx.beginPath();
             ctx.moveTo(topLeftX, prevY);
             ctx.lineTo(topRightX, prevY);
@@ -144,21 +127,21 @@ function drawGrid() {
             ctx.closePath();
             ctx.fill();
             
-            // Skip text for white squares
-            if (shouldBeWhite) continue;
-            
-            // Draw white grid lines on top of colored blocks (distinct borders)
+            // Draw white grid lines on top of block - more visible
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(topLeftX, prevY);
             ctx.lineTo(topRightX, prevY);
+            ctx.moveTo(topRightX, prevY);
             ctx.lineTo(bottomRightX, y);
+            ctx.moveTo(bottomLeftX, y);
+            ctx.lineTo(bottomRightX, y);
+            ctx.moveTo(topLeftX, prevY);
             ctx.lineTo(bottomLeftX, y);
-            ctx.closePath();
             ctx.stroke();
             
-            // Draw term text on blocks (show text on visible blocks)
+            // Draw term text on blocks (more visible, larger threshold)
             if (scale > 0.05) {
                 const centerX = (topLeftX + topRightX + bottomLeftX + bottomRightX) / 4;
                 const centerY = (prevY + y) / 2;
@@ -168,13 +151,19 @@ function drawGrid() {
                 const cellHeight = Math.abs(y - prevY);
                 const minDimension = Math.min(cellWidth, cellHeight);
                 
-                // Calculate font size that fits (scaled with perspective)
-                let fontSize = Math.max(6, Math.min(scale * 30, minDimension * 0.4));
+                // Calculate font size that fits - larger and more visible
+                let fontSize = Math.max(8, Math.min(scale * 30, minDimension * 0.4));
                 
                 ctx.fillStyle = '#FFFFFF';
-                ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                ctx.font = `bold ${fontSize}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
+                
+                // Add text shadow for better visibility
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
                 
                 // Measure text to ensure it fits
                 const words = block.term.split(' ');
@@ -182,7 +171,7 @@ function drawGrid() {
                 
                 // Check if text fits on one line
                 ctx.save();
-                ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                ctx.font = `bold ${fontSize}px Arial`;
                 const metrics = ctx.measureText(block.term);
                 if (metrics.width > cellWidth * 0.85) {
                     needsSplit = true;
@@ -193,14 +182,14 @@ function drawGrid() {
                 }
                 ctx.restore();
                 
-                // Render text with better visibility
+                // Render text
                 if (needsSplit && words.length > 1) {
                     // Split into two lines
                     const midPoint = Math.ceil(words.length / 2);
                     const line1 = words.slice(0, midPoint).join(' ');
                     const line2 = words.slice(midPoint).join(' ');
                     
-                    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                    ctx.font = `bold ${fontSize}px Arial`;
                     const lineHeight = fontSize * 1.3;
                     const totalHeight = lineHeight * 2;
                     
@@ -210,23 +199,21 @@ function drawGrid() {
                         ctx.fillText(line2, centerX, centerY + lineHeight / 2);
                     } else {
                         // Use single line with smaller font
-                        fontSize = Math.max(8, cellHeight * 0.28);
-                        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                        fontSize = Math.max(8, cellHeight * 0.3);
+                        ctx.font = `bold ${fontSize}px Arial`;
                         ctx.fillText(block.term, centerX, centerY);
                     }
                 } else {
-                    // Single line - ensure text is visible
-                    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-                    // Add text shadow for better readability
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-                    ctx.shadowBlur = 2;
-                    ctx.shadowOffsetX = 1;
-                    ctx.shadowOffsetY = 1;
+                    // Single line
+                    ctx.font = `bold ${fontSize}px Arial`;
                     ctx.fillText(block.term, centerX, centerY);
-                    ctx.shadowBlur = 0;
-                    ctx.shadowOffsetX = 0;
-                    ctx.shadowOffsetY = 0;
                 }
+                
+                // Reset shadow
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
             }
         }
     }
