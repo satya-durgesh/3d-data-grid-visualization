@@ -1,0 +1,29 @@
+{
+  "name": "3d-data-grid-visualization",
+  "version": "1.0.0",
+  "description": "Animated 3D grid visualization with data-related terms in checkerboard pattern",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "3d",
+    "animation",
+    "data-visualization",
+    "grid",
+    "canvas"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
+
