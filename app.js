@@ -9,17 +9,17 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// Configuration - matching the image
+// Configuration
 const config = {
-    horizonY: 0.5, // Horizon line at mid-height (50% from top) - vanishing point
+    horizonY: 0.5, // Horizon line position (50% from top) - mid-height
     vanishingPointX: 0.5, // Vanishing point X (center)
-    gridSpacing: 120, // Base spacing between grid lines
+    gridSpacing: 100, // Base spacing between grid lines
     speed: 1.5, // Movement speed
-    gridDepth: 100, // Number of grid rows
+    gridDepth: 100, // Number of grid rows (enough for seamless cycle)
     isPlaying: true
 };
 
-// Blocks with terms matching the image exactly - Medium Purple, Vibrant Teal, Light Blue
+// Blocks with terms matching the image - Medium Purple, Vibrant Teal, Light Blue
 const blocks = [
     { term: 'ETL', color: '#87CEEB' }, // Light Blue
     { term: 'DATA', color: '#00CED1' }, // Vibrant Teal
@@ -41,57 +41,65 @@ const blocks = [
 // Grid state
 let gridOffset = 0;
 
-// Draw one-point perspective grid matching the image
+// Draw one-point perspective grid - full plane extending across entire viewport
 function drawGrid() {
     const horizonY = canvas.height * config.horizonY;
     const vpX = canvas.width * config.vanishingPointX;
     const vpY = horizonY;
     
-    // Clear canvas with white background
+    // Clear canvas with white background first
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Draw grid lines first - very thin, subtle on white background
+    // Draw grid lines - extending fully across the plane
     for (let i = 0; i < config.gridDepth; i++) {
         const depth = i + gridOffset;
-        // Grid starts larger at bottom (foreground) and converges upward
         const y = vpY + depth * config.gridSpacing;
         
-        if (y < vpY - 50 || y > canvas.height + 200) continue;
+        // Only draw lines that are visible on screen
+        if (y < -100 || y > canvas.height + 100) continue;
         
         const distanceFromHorizon = y - vpY;
-        // Scale increases as we go down (away from horizon)
+        // Scale increases as we move away from horizon (downward)
         const scale = Math.max(0.01, Math.abs(distanceFromHorizon) / (canvas.height * 0.8));
-        const width = canvas.width * scale;
         const cellSize = config.gridSpacing * scale;
-        const numCells = Math.ceil(width / cellSize);
         
-        // Draw horizontal grid line - very thin, subtle grey
+        // Calculate how many cells we need to cover full width
+        // For perspective, cells get larger as we move away from horizon
+        const maxWidth = Math.max(canvas.width * 1.5, Math.abs(distanceFromHorizon) * 2);
+        const numCells = Math.ceil(maxWidth / cellSize);
+        
+        // Draw horizontal grid line - full width across the plane
         ctx.strokeStyle = '#E8E8E8';
         ctx.lineWidth = 0.5;
         ctx.beginPath();
-        ctx.moveTo(vpX - width / 2, y);
-        ctx.lineTo(vpX + width / 2, y);
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
         ctx.stroke();
         
         // Draw vertical grid lines converging to vanishing point
-        for (let cell = -Math.floor(numCells / 2); cell <= Math.floor(numCells / 2); cell++) {
+        // Extend beyond viewport to ensure full coverage
+        for (let cell = -numCells; cell <= numCells; cell++) {
             const x = vpX + cell * cellSize;
+            // Only draw if line would be visible
+            if (x < -100 || x > canvas.width + 100) continue;
+            
             ctx.beginPath();
-            ctx.moveTo(x, y);
+            ctx.moveTo(x, Math.max(0, y));
             ctx.lineTo(vpX, vpY);
             ctx.stroke();
         }
     }
     
-    // Draw filled blocks with checkerboard pattern
+    // Draw filled blocks with checkerboard pattern - full plane
     for (let i = 1; i < config.gridDepth; i++) {
         const depth = i + gridOffset;
         const y = vpY + depth * config.gridSpacing;
         const prevY = vpY + (depth - 1) * config.gridSpacing;
         
-        if (y < vpY - 50 || y > canvas.height + 200) continue;
-        if (prevY < vpY - 50) continue;
+        // Only draw blocks that are visible on screen
+        if (y < -100 || y > canvas.height + 100) continue;
+        if (prevY < -100) continue;
         
         const distanceFromHorizon = y - vpY;
         const prevDistance = prevY - vpY;
@@ -100,16 +108,18 @@ function drawGrid() {
         
         const cellSize = config.gridSpacing * scale;
         const prevCellSize = config.gridSpacing * prevScale;
-        const width = canvas.width * scale;
-        const numCells = Math.ceil(width / cellSize);
         
-        for (let cell = -Math.floor(numCells / 2); cell < Math.floor(numCells / 2); cell++) {
+        // Calculate cells needed to cover full width and beyond
+        const maxWidth = Math.max(canvas.width * 1.5, Math.abs(distanceFromHorizon) * 2);
+        const numCells = Math.ceil(maxWidth / cellSize);
+        
+        for (let cell = -numCells; cell < numCells; cell++) {
             // Proper checkerboard pattern - alternating colored and white squares
             const rowIndex = Math.floor(i);
-            const colIndex = Math.floor(cell + Math.floor(numCells / 2));
+            const colIndex = Math.floor(cell + numCells);
             const isColored = (rowIndex + colIndex) % 2 === 0;
             
-            // Only draw colored blocks (white squares are just the background)
+            // Only draw colored blocks (white squares are just background)
             if (!isColored) continue;
             
             // Calculate cell corners with perspective
@@ -118,11 +128,16 @@ function drawGrid() {
             const bottomLeftX = vpX + cell * cellSize;
             const bottomRightX = vpX + (cell + 1) * cellSize;
             
+            // Skip if cell is completely outside viewport
+            const minX = Math.min(topLeftX, bottomLeftX);
+            const maxX = Math.max(topRightX, bottomRightX);
+            if (maxX < 0 || minX > canvas.width) continue;
+            
             // Get block data (deterministic based on position)
-            const blockIndex = Math.abs((i * 17 + cell * 11) % blocks.length);
+            const blockIndex = Math.abs((i * 13 + cell * 7) % blocks.length);
             const block = blocks[blockIndex];
             
-            // Draw filled block with color
+            // Draw filled block (solid color, no gradient)
             ctx.fillStyle = block.color;
             ctx.beginPath();
             ctx.moveTo(topLeftX, prevY);
@@ -132,7 +147,7 @@ function drawGrid() {
             ctx.closePath();
             ctx.fill();
             
-            // Draw white grid lines on top of colored block - more distinct borders
+            // Draw white grid lines on top of block
             ctx.strokeStyle = '#FFFFFF';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -146,8 +161,8 @@ function drawGrid() {
             ctx.lineTo(bottomLeftX, y);
             ctx.stroke();
             
-            // Draw term text on blocks - white, bold, centered
-            if (scale > 0.06) {
+            // Draw term text on blocks (only if large enough and visible)
+            if (scale > 0.06 && y > 0 && y < canvas.height) {
                 const centerX = (topLeftX + topRightX + bottomLeftX + bottomRightX) / 4;
                 const centerY = (prevY + y) / 2;
                 
@@ -174,6 +189,7 @@ function drawGrid() {
                 const metrics = ctx.measureText(block.term);
                 if (metrics.width > cellWidth * 0.85) {
                     needsSplit = true;
+                    // Try smaller font or split
                     if (words.length > 1) {
                         fontSize = Math.max(8, fontSize * 0.8);
                     }
@@ -222,7 +238,10 @@ function animate() {
             gridOffset = 0;
         }
         
-        // Draw the grid
+        // Draw the grid (background is cleared inside drawGrid)
+        drawGrid();
+    } else {
+        // When paused, still draw the grid
         drawGrid();
     }
     
@@ -242,3 +261,4 @@ document.getElementById('reset').addEventListener('click', () => {
     config.isPlaying = true;
     document.getElementById('playPause').textContent = 'Pause';
 });
+
