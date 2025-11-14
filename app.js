@@ -9,132 +9,89 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// Configuration - matching exact specifications
+// Configuration
 const config = {
-    gridAreaPercent: 0.55, // Grid occupies bottom 55% of canvas
+    horizonY: 0.3, // Horizon line position (30% from top) - starting point
     vanishingPointX: 0.5, // Vanishing point X (center)
-    vanishingPointY: 0.0, // Vanishing point Y (top center)
-    gridSpacing: 100, // Base spacing between grid lines
-    speed: 1.5, // Movement speed
-    gridDepth: 150, // Number of grid rows
-    isPlaying: true
+    gridSpacing: 80, // Base spacing between grid lines
+    speed: 0.5, // Movement speed (slower)
+    gridDepth: 60, // Number of grid rows (enough for seamless cycle)
+    isPlaying: true,
+    blockDensity: 0.5 // Checkerboard pattern - 50% of alternating cells
 };
 
-// Color palette - 4 colors: Teal, Purple, Blue, Green
-const colors = [
-    '#00CED1', // Vibrant Teal
-    '#9370DB', // Medium Purple
-    '#4169E1', // Royal Blue
-    '#32CD32'  // Lime Green
-];
-
-// Data terms for tiles
-const terms = [
-    'DATA ENGINEERING',
-    'MACHINE LEARNING',
-    'PYTHON',
-    'SQL',
-    'DATA SCIENTIST',
-    'BIG DATA',
-    'ETL',
-    'CLOUD',
-    'FEATURE ENGINEERING',
-    'MODEL TRAINING',
-    'DATA QUALITY',
-    'DATA ANALYST',
-    'DATA PIPELINES',
-    'MLOPS',
-    'DATA WAREHOUSE'
+// Blocks with terms and mixed colors
+const blocks = [
+    { term: 'DATA ENGINEERING', color: '#9370DB' }, // Purple
+    { term: 'DATA ANALYST', color: '#00CED1' }, // Teal/Cyan
+    { term: 'DATA SCIENTIST', color: '#4169E1' }, // Blue
+    { term: 'MACHINE LEARNING', color: '#9370DB' }, // Purple
+    { term: 'BIG DATA', color: '#00CED1' }, // Teal/Cyan
+    { term: 'FEATURE ENGINEERING', color: '#4169E1' }, // Blue
+    { term: 'MLOPS', color: '#9370DB' }, // Purple
+    { term: 'CLOUD DATA', color: '#00CED1' }, // Teal/Cyan
+    { term: 'ETL', color: '#4169E1' }, // Blue
+    { term: 'ELT', color: '#9370DB' }, // Purple
+    { term: 'DATA QUALITY', color: '#00CED1' }, // Teal/Cyan
+    { term: 'MODEL TRAINING', color: '#4169E1' }, // Blue
+    { term: 'DATA PIPELINES', color: '#9370DB' }, // Purple
+    { term: 'PYTHON', color: '#00CED1' }, // Teal/Cyan
+    { term: 'SQL', color: '#4169E1' } // Blue
 ];
 
 // Grid state
 let gridOffset = 0;
 
-// Draw one-point perspective grid - matching exact specifications
+// Draw one-point perspective grid
 function drawGrid() {
+    const horizonY = canvas.height * config.horizonY;
     const vpX = canvas.width * config.vanishingPointX;
-    const vpY = canvas.height * config.vanishingPointY; // Top center
+    const vpY = horizonY;
     
-    // Calculate grid area - bottom 55% of canvas
-    const gridStartY = canvas.height * (1 - config.gridAreaPercent); // Top of grid area
-    const gridEndY = canvas.height; // Bottom of canvas
-    const gridHeight = gridEndY - gridStartY;
-    
-    // Clear canvas with white background
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw background fade - bottom (strong) to top (white)
-    const gradient = ctx.createLinearGradient(0, gridStartY, 0, 0);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 0)'); // Top - transparent white
-    gradient.addColorStop(1, 'rgba(255, 255, 255, 1)'); // Bottom - solid white
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, gridStartY);
-    
-    // Draw grid lines - light black/grey with opacity
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)'; // #00000025 equivalent
-    ctx.lineWidth = 0.5;
-    
-    // Draw horizontal grid lines converging to vanishing point
+    // Draw grid lines first (white lines on white background - subtle)
     for (let i = 0; i < config.gridDepth; i++) {
         const depth = i + gridOffset;
-        // Calculate Y position - starts from bottom, converges to top
-        const distanceFromBottom = depth * config.gridSpacing;
-        const y = gridEndY - distanceFromBottom;
+        const y = vpY + depth * config.gridSpacing;
         
-        // Only draw lines in grid area
-        if (y < gridStartY - 100 || y > gridEndY + 100) continue;
+        if (y < vpY - 30 || y > canvas.height + 100) continue;
         
-        // Calculate scale based on distance from vanishing point
-        const distanceFromVP = Math.abs(y - vpY);
-        const maxDistance = gridHeight;
-        const scale = Math.max(0.01, distanceFromVP / maxDistance);
-        
-        // Calculate width at this Y position
+        const distanceFromHorizon = y - vpY;
+        const scale = Math.max(0.02, Math.abs(distanceFromHorizon) / (canvas.height * 0.6));
         const width = canvas.width * scale;
-        const halfWidth = width / 2;
-        
-        // Draw horizontal line - full width at this perspective
-        ctx.beginPath();
-        ctx.moveTo(vpX - halfWidth, y);
-        ctx.lineTo(vpX + halfWidth, y);
-        ctx.stroke();
-        
-        // Draw vertical grid lines converging to vanishing point
         const cellSize = config.gridSpacing * scale;
         const numCells = Math.ceil(width / cellSize);
         
+        // Draw horizontal grid line (white/grey for visibility)
+        ctx.strokeStyle = '#E0E0E0';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(vpX - width / 2, y);
+        ctx.lineTo(vpX + width / 2, y);
+        ctx.stroke();
+        
+        // Draw vertical grid lines converging to vanishing point
         for (let cell = -Math.floor(numCells / 2); cell <= Math.floor(numCells / 2); cell++) {
             const x = vpX + cell * cellSize;
-            
-            // Only draw if line would be visible
-            if (x < -100 || x > canvas.width + 100) continue;
-            
             ctx.beginPath();
-            ctx.moveTo(x, Math.max(gridStartY, y));
+            ctx.moveTo(x, y);
             ctx.lineTo(vpX, vpY);
             ctx.stroke();
         }
     }
     
-    // Draw tiles with strict checkerboard pattern
+    // Draw filled blocks with checkerboard pattern
     for (let i = 1; i < config.gridDepth; i++) {
         const depth = i + gridOffset;
-        const distanceFromBottom = depth * config.gridSpacing;
-        const y = gridEndY - distanceFromBottom;
-        const prevDistance = (depth - 1) * config.gridSpacing;
-        const prevY = gridEndY - prevDistance;
+        const y = vpY + depth * config.gridSpacing;
+        const prevY = vpY + (depth - 1) * config.gridSpacing;
         
-        // Only draw tiles in grid area
-        if (y < gridStartY - 100 || y > gridEndY + 100) continue;
-        if (prevY < gridStartY - 100) continue;
+        if (y < vpY - 30 || y > canvas.height + 100) continue;
+        if (prevY < vpY - 30) continue;
         
-        // Calculate scale for perspective
-        const distanceFromVP = Math.abs(y - vpY);
-        const prevDistanceFromVP = Math.abs(prevY - vpY);
-        const maxDistance = gridHeight;
-        const scale = Math.max(0.01, distanceFromVP / maxDistance);
-        const prevScale = Math.max(0.01, prevDistanceFromVP / maxDistance);
+        const distanceFromHorizon = y - vpY;
+        const prevDistance = prevY - vpY;
+        const scale = Math.max(0.02, Math.abs(distanceFromHorizon) / (canvas.height * 0.6));
+        const prevScale = Math.max(0.02, Math.abs(prevDistance) / (canvas.height * 0.6));
         
         const cellSize = config.gridSpacing * scale;
         const prevCellSize = config.gridSpacing * prevScale;
@@ -142,34 +99,24 @@ function drawGrid() {
         const numCells = Math.ceil(width / cellSize);
         
         for (let cell = -Math.floor(numCells / 2); cell < Math.floor(numCells / 2); cell++) {
-            // Strict checkerboard pattern - alternating colored and white
-            const rowIndex = Math.floor(i);
-            const colIndex = Math.floor(cell + Math.floor(numCells / 2));
-            const isColored = (rowIndex + colIndex) % 2 === 0;
+            // Checkerboard pattern - alternating cells
+            const isEven = (i + cell) % 2 === 0;
             
-            // Only draw colored tiles (white tiles are just background)
-            if (!isColored) continue;
+            // Only fill checkerboard pattern cells (every other cell)
+            if (!isEven) continue;
             
-            // Calculate tile corners with perspective
+            // Calculate cell corners with perspective
             const topLeftX = vpX + cell * prevCellSize;
             const topRightX = vpX + (cell + 1) * prevCellSize;
             const bottomLeftX = vpX + cell * cellSize;
             const bottomRightX = vpX + (cell + 1) * cellSize;
             
-            // Skip if tile is completely outside viewport
-            const minX = Math.min(topLeftX, bottomLeftX, topRightX, bottomRightX);
-            const maxX = Math.max(topLeftX, bottomLeftX, topRightX, bottomRightX);
-            if (maxX < 0 || minX > canvas.width) continue;
-            if (y < gridStartY || prevY > gridEndY) continue;
+            // Get block data (deterministic based on position)
+            const blockIndex = Math.abs((i * 13 + cell * 7) % blocks.length);
+            const block = blocks[blockIndex];
             
-            // Get color and term (deterministic based on position)
-            const colorIndex = Math.abs((i * 7 + cell * 11) % colors.length);
-            const termIndex = Math.abs((i * 13 + cell * 17) % terms.length);
-            const tileColor = colors[colorIndex];
-            const term = terms[termIndex];
-            
-            // Draw colored tile
-            ctx.fillStyle = tileColor;
+            // Draw filled block (solid color, no gradient)
+            ctx.fillStyle = block.color;
             ctx.beginPath();
             ctx.moveTo(topLeftX, prevY);
             ctx.lineTo(topRightX, prevY);
@@ -178,9 +125,9 @@ function drawGrid() {
             ctx.closePath();
             ctx.fill();
             
-            // Draw grid lines on tile - light black/grey
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)'; // Slightly darker for colored tiles
-            ctx.lineWidth = 0.5;
+            // Draw white grid lines on top of block
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(topLeftX, prevY);
             ctx.lineTo(topRightX, prevY);
@@ -192,45 +139,42 @@ function drawGrid() {
             ctx.lineTo(bottomLeftX, y);
             ctx.stroke();
             
-            // Draw text - always facing viewer (not rotated)
-            if (scale > 0.04 && y > gridStartY && y < gridEndY) {
+            // Draw term text on blocks (only if large enough)
+            if (scale > 0.08) {
                 const centerX = (topLeftX + topRightX + bottomLeftX + bottomRightX) / 4;
                 const centerY = (prevY + y) / 2;
                 
                 // Calculate available space
-                const tileWidth = Math.abs(topRightX - topLeftX);
-                const tileHeight = Math.abs(y - prevY);
-                const minDimension = Math.min(tileWidth, tileHeight);
+                const cellWidth = Math.abs(topRightX - topLeftX);
+                const cellHeight = Math.abs(y - prevY);
+                const minDimension = Math.min(cellWidth, cellHeight);
                 
-                // Calculate font size - scales with perspective
-                let fontSize = Math.max(8, Math.min(scale * 50, minDimension * 0.4));
+                // Calculate font size that fits
+                let fontSize = Math.max(6, Math.min(scale * 22, minDimension * 0.3));
                 
-                // Determine text color based on tile color brightness
-                const rgb = hexToRgb(tileColor);
-                const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
-                const textColor = brightness > 128 ? '#000000' : '#FFFFFF';
-                
-                ctx.fillStyle = textColor;
+                ctx.fillStyle = '#FFFFFF';
                 ctx.font = `bold ${fontSize}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 
                 // Measure text to ensure it fits
-                const words = term.split(' ');
+                const words = block.term.split(' ');
                 let needsSplit = false;
                 
+                // Check if text fits on one line
                 ctx.save();
                 ctx.font = `bold ${fontSize}px Arial`;
-                const metrics = ctx.measureText(term);
-                if (metrics.width > tileWidth * 0.85) {
+                const metrics = ctx.measureText(block.term);
+                if (metrics.width > cellWidth * 0.9) {
                     needsSplit = true;
+                    // Try smaller font or split
                     if (words.length > 1) {
-                        fontSize = Math.max(8, fontSize * 0.8);
+                        fontSize = Math.max(6, fontSize * 0.7);
                     }
                 }
                 ctx.restore();
                 
-                // Render text - always facing viewer (no rotation)
+                // Render text
                 if (needsSplit && words.length > 1) {
                     // Split into two lines
                     const midPoint = Math.ceil(words.length / 2);
@@ -238,51 +182,46 @@ function drawGrid() {
                     const line2 = words.slice(midPoint).join(' ');
                     
                     ctx.font = `bold ${fontSize}px Arial`;
-                    const lineHeight = fontSize * 1.25;
+                    const lineHeight = fontSize * 1.2;
                     const totalHeight = lineHeight * 2;
                     
-                    if (totalHeight <= tileHeight * 0.75) {
+                    // Check if two lines fit
+                    if (totalHeight <= cellHeight * 0.8) {
                         ctx.fillText(line1, centerX, centerY - lineHeight / 2);
                         ctx.fillText(line2, centerX, centerY + lineHeight / 2);
                     } else {
-                        fontSize = Math.max(8, tileHeight * 0.3);
+                        // Use single line with smaller font
+                        fontSize = Math.max(6, cellHeight * 0.25);
                         ctx.font = `bold ${fontSize}px Arial`;
-                        ctx.fillText(term, centerX, centerY);
+                        ctx.fillText(block.term, centerX, centerY);
                     }
                 } else {
+                    // Single line
                     ctx.font = `bold ${fontSize}px Arial`;
-                    ctx.fillText(term, centerX, centerY);
+                    ctx.fillText(block.term, centerX, centerY);
                 }
             }
         }
     }
 }
 
-// Helper function to convert hex to RGB
-function hexToRgb(hex) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-    } : { r: 0, g: 0, b: 0 };
-}
-
 // Animation loop
 function animate() {
     if (config.isPlaying) {
-        // Update grid offset for movement toward viewer (from top to bottom)
+        // Clear canvas with white background
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Update grid offset for movement away from viewer (toward top)
+        // Increasing offset makes cells move up (away from viewer toward top)
         gridOffset += config.speed * 0.01;
         
-        // Seamless cycle
+        // Seamless cycle - when one cycle completes, reset smoothly
         if (gridOffset >= 1) {
             gridOffset = 0;
         }
         
         // Draw the grid
-        drawGrid();
-    } else {
-        // When paused, still draw the grid
         drawGrid();
     }
     
@@ -302,3 +241,4 @@ document.getElementById('reset').addEventListener('click', () => {
     config.isPlaying = true;
     document.getElementById('playPause').textContent = 'Pause';
 });
+
